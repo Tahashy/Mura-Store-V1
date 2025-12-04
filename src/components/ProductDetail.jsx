@@ -32,16 +32,18 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}
     >
       <div 
-        className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-2xl max-w-4xl w-full overflow-hidden animate-fadeIn"
+        className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-2xl w-full max-w-4xl my-8 overflow-hidden animate-fadeIn"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="grid md:grid-cols-2">
+        {/* LAYOUT MÓVIL Y DESKTOP */}
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          
           {/* IMAGEN */}
-          <div className="relative h-96 md:h-auto bg-gray-800">
+          <div className="relative h-64 sm:h-80 md:h-auto bg-gray-800">
             <img 
               src={product.image} 
               alt={product.name}
@@ -49,52 +51,52 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
             />
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90 transition"
+              className="absolute top-4 right-4 bg-black bg-opacity-70 p-2 rounded-full hover:bg-opacity-90 transition z-10"
             >
               <X className="w-6 h-6 text-white" />
             </button>
             
             {/* Badge de stock bajo */}
             {product.stock && product.stock < 10 && (
-              <div className="absolute top-4 left-4 bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              <div className="absolute top-4 left-4 bg-yellow-600 text-white px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
                 ⚠️ Solo {product.stock} disponibles
               </div>
             )}
           </div>
 
           {/* DETALLES */}
-          <div className="p-6 flex flex-col">
+          <div className="p-4 sm:p-6 flex flex-col max-h-[70vh] md:max-h-none overflow-y-auto md:overflow-visible">
             {/* Nombre y categoría */}
             <div className="mb-2">
-              <span className="text-red-600 text-sm font-semibold uppercase">{product.category}</span>
+              <span className="text-red-600 text-xs sm:text-sm font-semibold uppercase">{product.category}</span>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">{product.name}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">{product.name}</h2>
             
             {/* Rating */}
             <div className="flex items-center gap-2 mb-4">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={`w-4 h-4 ${i < 4 ? 'text-yellow-500 fill-yellow-500' : 'text-gray-600'}`} />
+                  <Star key={i} className={`w-3 h-3 sm:w-4 sm:h-4 ${i < 4 ? 'text-yellow-500 fill-yellow-500' : 'text-gray-600'}`} />
                 ))}
               </div>
-              <span className="text-gray-400 text-sm">({product.views || 0} vistas)</span>
+              <span className="text-gray-400 text-xs sm:text-sm">({product.views || 0} vistas)</span>
             </div>
 
             {/* Precio */}
-            <div className="text-3xl font-bold text-red-600 mb-6">
+            <div className="text-2xl sm:text-3xl font-bold text-red-600 mb-4 sm:mb-6">
               S/ {product.price.toFixed(2)}
             </div>
 
             {/* COLOR */}
             {product.colors && product.colors.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-white font-semibold mb-3">Color</h3>
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-white font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Color</h3>
                 <div className="flex gap-2 flex-wrap">
                   {product.colors.map((color, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-4 py-2 rounded-lg border-2 transition ${
+                      className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-2 transition text-xs sm:text-sm ${
                         selectedColor === color
                           ? 'border-red-600 bg-red-600 text-white'
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-red-600'
@@ -109,17 +111,17 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
 
             {/* TALLA */}
             {product.sizes && product.sizes.length > 0 && (
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-white font-semibold">Talla</h3>
-                  <button className="text-red-600 text-sm hover:underline">Guía de tallas</button>
+              <div className="mb-4 sm:mb-6">
+                <div className="flex justify-between items-center mb-2 sm:mb-3">
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Talla</h3>
+                  <button className="text-red-600 text-xs sm:text-sm hover:underline">Guía de tallas</button>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {product.sizes.map((size, idx) => (
                     <button
                       key={idx}
                       onClick={() => setSelectedSize(size)}
-                      className={`min-w-12 h-12 px-3 rounded-lg border-2 font-semibold transition ${
+                      className={`min-w-10 h-10 sm:min-w-12 sm:h-12 px-2 sm:px-3 rounded-lg border-2 font-semibold transition text-sm sm:text-base ${
                         selectedSize === size
                           ? 'border-red-600 bg-red-600 text-white'
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-red-600'
@@ -133,8 +135,8 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
             )}
 
             {/* CANTIDAD */}
-            <div className="mb-6">
-              <h3 className="text-white font-semibold mb-3">Cantidad</h3>
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-white font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Cantidad</h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -143,7 +145,7 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
                 >
                   <Minus className="w-4 h-4 text-white" />
                 </button>
-                <span className="text-white font-bold text-xl w-12 text-center">{quantity}</span>
+                <span className="text-white font-bold text-lg sm:text-xl w-12 text-center">{quantity}</span>
                 <button
                   onClick={() => setQuantity(Math.min(product.stock || 999, quantity + 1))}
                   className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-lg hover:bg-red-600 transition flex items-center justify-center"
@@ -155,9 +157,9 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
             </div>
 
             {/* DESCRIPCIÓN */}
-            <div className="mb-6 flex-1">
-              <h3 className="text-white font-semibold mb-2">Descripción</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
+            <div className="mb-4 sm:mb-6 flex-1">
+              <h3 className="text-white font-semibold mb-2 text-sm sm:text-base">Descripción</h3>
+              <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
                 {product.description || 'Sin descripción disponible'}
               </p>
             </div>
@@ -165,10 +167,17 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
             {/* BOTÓN AGREGAR */}
             <button
               onClick={handleAddToCart}
-              className="w-full bg-red-600 text-white py-4 rounded-lg font-bold hover:bg-red-700 transition text-lg"
+              className="w-full bg-red-600 text-white py-3 sm:py-4 rounded-lg font-bold hover:bg-red-700 transition text-base sm:text-lg"
             >
               Añadir al Carrito - S/ {(product.price * quantity).toFixed(2)}
             </button>
+
+            {/* Stock warning */}
+            {product.stock && product.stock < 10 && (
+              <p className="text-yellow-500 text-xs sm:text-sm mt-3 text-center">
+                ⚠️ ¡Solo quedan {product.stock} unidades!
+              </p>
+            )}
           </div>
         </div>
       </div>
