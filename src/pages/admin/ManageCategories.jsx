@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
 import { useCategories } from '../../hooks/useCategories';
 import { Plus, Trash2, Tag } from 'lucide-react';
+import Toast from '../../components/Toast';
 
 export default function ManageCategories() {
   const { categories, loading, addCategory, deleteCategory } = useCategories();
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  // Estado para Toast
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
   const handleAdd = async () => {
     if (!newCategoryName.trim()) {
-      alert('⚠️ Ingresa un nombre para la categoría');
+      showToast('⚠️ Ingresa un nombre para la categoría', 'warning');
       return;
     }
 
@@ -16,21 +23,21 @@ export default function ManageCategories() {
 
     if (result.success) {
       setNewCategoryName('');
-      alert('✅ Categoría agregada');
+      showToast('✅ Categoría agregada correctamente', 'success');
     } else {
-      alert('❌ Error al agregar categoría');
+      showToast('❌ Error al agregar categoría', 'error');
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (confirm(`¿Eliminar categoría "${name}"?`)) {
-      const result = await deleteCategory(id);
+    showToast(`🗑️ Eliminando categoría "${name}"...`, 'info');
 
-      if (result.success) {
-        alert('✅ Categoría eliminada');
-      } else {
-        alert('❌ Error al eliminar');
-      }
+    const result = await deleteCategory(id);
+
+    if (result.success) {
+      showToast('✅ Categoría eliminada', 'success');
+    } else {
+      showToast('❌ Error al eliminar categoría', 'error');
     }
   };
 
@@ -40,6 +47,13 @@ export default function ManageCategories() {
 
   return (
     <div className="space-y-6">
+      {/* Toast global */}
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
 
       {/* Header */}
       <div>
@@ -69,7 +83,7 @@ export default function ManageCategories() {
         </div>
       </div>
 
-      {/* Lista de categorías */}
+      {/* Lista */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((category) => (
           <div
@@ -104,7 +118,6 @@ export default function ManageCategories() {
           <p className="text-gray-500">No hay categorías creadas</p>
         </div>
       )}
-
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useCoupons } from '../hooks/useCoupons';
+import { Tag } from 'lucide-react';
 import Header from './Header';
 import ProductCard from './ProductCard';
 import ProductDetail from './ProductDetail';
 import Cart from './Cart';
-import CodeModal from './CodeModal';
 import SuccessToast from './SuccessToast';
 import { useProducts } from '../hooks/useProducts';
 import { useCategories } from '../hooks/useCategories';
@@ -11,7 +12,7 @@ import { useConfig } from '../hooks/useConfig';
 
 const generateRandomCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'WELCOME-';
+  let code = 'MAKI-';
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -23,35 +24,35 @@ export default function MerchStore() {
   const { products, loading: loadingProducts, incrementViews } = useProducts();
   const { categories, loading: loadingCategories } = useCategories();
   const { config } = useConfig();
+  const { validateCoupon, markAsUsed } = useCoupons();
 
   // Estados locales
   const [cart, setCart] = useState([]);
-  const [welcomeCode, setWelcomeCode] = useState('');
-  const [isCodeUsed, setIsCodeUsed] = useState(false);
   const [hasDiscount, setHasDiscount] = useState(false);
-  const [showCodeModal, setShowCodeModal] = useState(true);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [showCouponInput, setShowCouponInput] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
   const [currentMakiCoupon, setCurrentMakiCoupon] = useState(null);
-  const [usedMakiCoupons, setUsedMakiCoupons] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  useEffect(() => {
-    setWelcomeCode(generateRandomCode());
-  }, []);
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) {
+      alert('⚠️ Ingresa un código');
+      return;
+    }
 
-  const applyCode = (inputCode, resetInput) => {
-    if (inputCode === welcomeCode && !isCodeUsed) {
+    const result = await validateCoupon(couponInput);
+    if (result.success) {
+      setAppliedCoupon(result.coupon);
       setHasDiscount(true);
-      setIsCodeUsed(true);
-      setShowCodeModal(false);
-      alert(`¡Código aplicado! Tienes ${config.welcome_discount}% de descuento`);
-      resetInput('');
-    } else if (isCodeUsed) {
-      alert('Este código ya fue utilizado');
+      setShowCouponInput(false);
+      setCouponInput('');
+      alert(`✅ Cupón aplicado: ${result.coupon.discount}% OFF`);
     } else {
-      alert('Código inválido');
+      alert(`❌ ${result.message}`);
     }
   };
 
@@ -88,60 +89,59 @@ export default function MerchStore() {
 
   const calculateTotal = () => {
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    return hasDiscount ? subtotal * (1 - config.welcome_discount / 100) : subtotal;
+    if (hasDiscount && appliedCoupon) {
+      return subtotal * (1 - appliedCoupon.discount / 100);
+    }
+    return subtotal;
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const completePurchase = () => {
+  const completePurchase = async () => {
     const itemCount = getTotalItems();
-    let newCoupon = null;
+    
+    // Marcar cupón como usado
+    if (appliedCoupon) {
+      await markAsUsed(appliedCoupon.code);
+    }
 
+    // Generar cupón de makis si compra 3+
+    let newCoupon = null;
     if (itemCount >= 3) {
       newCoupon = `MAKI-${generateRandomCode().slice(-6)}`;
       setCurrentMakiCoupon(newCoupon);
-      setUsedMakiCoupons([...usedMakiCoupons, newCoupon]);
     }
 
     const total = calculateTotal();
     let message = `Hola!%20Quiero%20realizar%20esta%20compra:%0A%0A`;
 
     cart.forEach((item) => {
-      const price = hasDiscount 
-        ? (item.price * (1 - config.welcome_discount / 100)).toFixed(2) 
+      const price = hasDiscount && appliedCoupon
+        ? (item.price * (1 - appliedCoupon.discount / 100)).toFixed(2) 
         : item.price.toFixed(2);
       message += `${item.quantity}x%20${item.name}`;
       if (item.selectedSize) message += `%20(${item.selectedSize})`;
-      if (item.selectedColor) message += `%20-20${item.selectedColor}`;
+      if (item.selectedColor) message += `%20-%20${item.selectedColor}`;
       message += `%20-%20S/${price}%0A`;
     });
 
     message += `%0A*Total:%20S/${total.toFixed(2)}*`;
     
-    if (hasDiscount) {
-      message += `%0ADescuento%20de%20bienvenida%20(${config.welcome_discount}%25)`;
+    if (hasDiscount && appliedCoupon) {
+      message += `%0ACupon%20aplicado:%20${appliedCoupon.code}%20(${appliedCoupon.discount}%25)`;
     }
 
     if (newCoupon) {
-      message += `%0A%0A*FELICITACIONES!*%0AHas%20ganado%20un%20cupon%20de%20descuento%20en%20makis:%0A*${newCoupon}*%0A%0AMuestralo%20al%20ordenar%20tus%20makis`;
-    }
-
-    const messageText = message.replace(/%20/g, ' ').replace(/%0A/g, '\n').replace(/%25/g, '%');
-    
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(messageText).catch(() => {});
+      message += `%0A%0A*FELICITACIONES!*%0AHas%20ganado%20un%20cupon%20de%20makis:%0A*${newCoupon}*`;
     }
 
     const whatsappUrl = `https://wa.me/${config.whatsapp_number}?text=${message}`;
-    const whatsappUrlAlt = `https://api.whatsapp.com/send?phone=${config.whatsapp_number}&text=${message}`;
-    
-    const newWindow = window.open(whatsappUrl, '_blank');
-    
-   
+    window.open(whatsappUrl, '_blank');
 
     setShowSuccess(true);
     setCart([]);
     setHasDiscount(false);
+    setAppliedCoupon(null);
 
     setTimeout(() => {
       setCurrentMakiCoupon(null);
@@ -175,23 +175,60 @@ export default function MerchStore() {
         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-red-700 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '4s' }}></div>
       </div>
 
+      {/* Botón para ingresar cupón */}
+      {!hasDiscount && (
+        <button
+          onClick={() => setShowCouponInput(!showCouponInput)}
+          className="fixed top-20 right-6 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition z-40 flex items-center gap-2 shadow-lg"
+        >
+          <Tag className="w-4 h-4" />
+          ¿Tienes un cupón?
+        </button>
+      )}
+
+      {/* Modal para ingresar cupón */}
+      {showCouponInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-xl p-6 sm:p-8 max-w-md w-full">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-4 text-center">Ingresa tu cupón</h3>
+            <input
+              type="text"
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+              placeholder="WELCOME-XXXXXX"
+              className="w-full px-4 py-3 bg-black border-2 border-gray-700 text-white rounded-lg mb-4 focus:border-red-600 focus:outline-none text-center text-lg tracking-wider"
+              maxLength="14"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleApplyCoupon}
+                className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition font-semibold"
+              >
+                Aplicar
+              </button>
+              <button
+                onClick={() => {
+                  setShowCouponInput(false);
+                  setCouponInput('');
+                }}
+                className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header
         hasDiscount={hasDiscount}
-        welcomeDiscount={config.welcome_discount}
+        welcomeDiscount={appliedCoupon?.discount || 0}
         cartCount={getTotalItems()}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
         categories={categoryList}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
-      />
-
-      <CodeModal 
-        show={showCodeModal} 
-        welcomeCode={welcomeCode} 
-        welcomeDiscount={config.welcome_discount} 
-        onApply={applyCode} 
-        onClose={() => setShowCodeModal(false)} 
       />
 
       <SuccessToast show={showSuccess} />
@@ -206,6 +243,19 @@ export default function MerchStore() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-8 relative z-10">
+        {/* Mostrar cupón activo */}
+        {hasDiscount && appliedCoupon && (
+          <div className="bg-gradient-to-r from-green-900 to-green-800 border border-green-600 rounded-xl p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Tag className="w-6 h-6 text-green-400" />
+              <div>
+                <p className="text-white font-bold">Cupón aplicado: {appliedCoupon.code}</p>
+                <p className="text-green-300 text-sm">{appliedCoupon.discount}% de descuento</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <h2 className="text-3xl font-bold text-white mb-6 capitalize">
@@ -220,7 +270,7 @@ export default function MerchStore() {
                     <ProductCard 
                       product={product} 
                       hasDiscount={hasDiscount} 
-                      welcomeDiscount={config.welcome_discount} 
+                      welcomeDiscount={appliedCoupon?.discount || 0} 
                       addToCart={addToCart} 
                     />
                   </div>
@@ -236,7 +286,7 @@ export default function MerchStore() {
               removeFromCart={removeFromCart}
               calculateTotal={calculateTotal}
               hasDiscount={hasDiscount}
-              welcomeDiscount={config.welcome_discount}
+              welcomeDiscount={appliedCoupon?.discount || 0}
               getTotalItems={getTotalItems}
               currentMakiCoupon={currentMakiCoupon}
               onFinalizePurchase={completePurchase}

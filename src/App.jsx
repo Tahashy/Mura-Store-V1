@@ -3,19 +3,24 @@ import MuraStore from './components/MuraStore';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageProducts from './pages/admin/ManageProducts';
 import ManageCategories from './pages/admin/ManageCategories';
-import { Settings, LayoutDashboard, Package, Layers, Store, X } from 'lucide-react';
+import ManageCoupons from './pages/admin/ManageCoupons';
+
+import { Settings, LayoutDashboard, Package, Layers, Store,Tag, X ,UserLock} from 'lucide-react';
 
 export default function App() {
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [currentAdminPage, setCurrentAdminPage] = useState('dashboard');
+  const [loginError, setLoginError] = useState(false);
 
   const handleAdminLogin = () => {
-    if (adminPassword === 'admin123') {
+    if (adminPassword === 'Mura@2025') {
       setIsAdminAuth(true);
+      setAdminPassword('false');
     } else {
-      alert('❌ Contraseña incorrecta');
+      setLoginError(true);
+      setTimeout(() => setLoginError(false), 3000);
     }
   };
 
@@ -29,15 +34,16 @@ export default function App() {
   const adminPages = {
     dashboard: <AdminDashboard />,
     products: <ManageProducts />,
-    categories: <ManageCategories />
+    categories: <ManageCategories />,
+    coupons: <ManageCoupons />
   };
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'products', label: 'Productos', icon: Package },
-    { id: 'categories', label: 'Categorías', icon: Layers }
-  ];
-
+const menuItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'products', label: 'Productos', icon: Package },
+  { id: 'categories', label: 'Categorías', icon: Layers },
+  { id: 'coupons', label: 'Cupones', icon: Tag }
+];
   return (
     <div className="min-h-screen bg-black">
       {!showAdmin ? (
@@ -59,7 +65,7 @@ export default function App() {
           <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-2xl p-8 max-w-md w-full">
             <div className="text-center mb-6">
               <div className="bg-red-600 bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Settings className="w-8 h-8 text-red-600" />
+                <UserLock className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Panel de Administración</h2>
               <p className="text-gray-400">Ingresa tu contraseña</p>
@@ -68,11 +74,17 @@ export default function App() {
             <input
               type="password"
               value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
+              onChange={(e) => { setAdminPassword(e.target.value);
+                setLoginError(false);
+              }}
+
               onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
               placeholder="Contraseña"
-              className="w-full px-4 py-3 bg-black border-2 border-gray-700 text-white rounded-lg mb-4 focus:border-red-600 focus:outline-none"
+              className={`w-full mb-4 px-4 py-3 bg-black border-2 ${loginError ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg mb-2 focus:border-red-600 focus:outline-none transition`}
             />
+            {loginError && (
+              <p className="text-red-500 text-sm mb-4 text-center">❌ Contraseña incorrecta. Inténtalo de nuevo.</p>
+            )}
             
             <button
               onClick={handleAdminLogin}
@@ -87,10 +99,6 @@ export default function App() {
             >
               Volver a la tienda
             </button>
-            
-            <p className="text-xs text-gray-500 text-center mt-4">
-              Contraseña por defecto: <span className="text-red-600">admin123</span>
-            </p>
           </div>
         </div>
       ) : (

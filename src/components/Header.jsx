@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Tag, Search } from 'lucide-react';
+import logo from '../assets/logo.png'; // Cambiado a logo.png
 
 export default function Header({
   hasDiscount,
@@ -15,15 +16,29 @@ export default function Header({
     <header className="bg-gradient-to-r from-gray-900 to-black border-b border-red-600 shadow-lg sticky top-0 z-40 relative">
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-red-600">MuraStore</h1>
-            <p className="text-sm text-gray-400">Tu tienda de mercadería Favorita</p>
+          {/* Logo y título - alineados horizontalmente */}
+          <div className="flex items-center gap-0.0">
+            {/* Logo PNG */}
+            <div className="flex-shrink-0 mt-4">
+              <img 
+                src={logo} 
+                alt="Logo de MuraStore" 
+                className="h-35 w-35 object-contain drop-shadow-lg"
+              />
+            </div>
+            
+            {/* Título y subtítulo */}
+            <div className="flex flex-col">
+              <h1 className="text-3xl font-bold text-red-500 leading-tight">MuraStore</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Tu tienda de mercadería Favorita</p>
+            </div>
           </div>
 
+          {/* Elementos del lado derecho */}
           <div className="flex items-center gap-4">
             {hasDiscount && (
-              <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                <Tag className="w-4 h-4 inline mr-1" />
+              <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center">
+                <Tag className="w-4 h-4 mr-1" />
                 {welcomeDiscount}% OFF
               </div>
             )}

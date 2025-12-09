@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { useProducts } from '../../hooks/useProducts';
 import { useCategories } from '../../hooks/useCategories';
-import { Plus, Edit2, Trash2, Save, X, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import Toast from '../../components/Toast';
+import ConfirmModal from '../../components/ConfirmModal';
+
 
 export default function ManageProducts() {
   const { products, loading, addProduct, updateProduct, deleteProduct } = useProducts();
@@ -18,6 +21,21 @@ export default function ManageProducts() {
     sizes: '',
     stock: ''
   });
+
+  // Estados para Toast
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+  };
+
+  //Estados para confirmar eliminación
+  const [confirmModal, setConfirmModal] = useState({
+  show: false,
+  productId: null,
+  productName: ''
+});
+
 
   const handleEdit = (product) => {
     setEditingId(product.id);
@@ -45,24 +63,37 @@ export default function ManageProducts() {
     const result = await updateProduct(id, updates);
     if (result.success) {
       setEditingId(null);
-      alert('✅ Producto actualizado');
+      showToast('✅ Producto actualizado correctamente', 'success');
     } else {
-      alert('❌ Error al actualizar');
+      showToast('❌ Error al actualizar producto', 'error');
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (confirm(`¿Eliminar "${name}"?`)) {
-      const result = await deleteProduct(id);
-      if (result.success) {
-        alert('✅ Producto eliminado');
-      } else {
-        alert('❌ Error al eliminar');
-      }
-    }
+    setConfirmModal({ show: true, productId: id, productName: name });
   };
 
+  const confirmDelete = async () => {
+  const { productId, productName } = confirmModal;
+
+  const result = await deleteProduct(productId);
+
+  if (result.success) {
+    showToast(`🗑️ "${productName}" eliminado correctamente`, 'success');
+  } else {
+    showToast('❌ Error al eliminar producto', 'error');
+  }
+
+  setConfirmModal({ show: false, productId: null, productName: '' });
+};
+
+
   const handleAdd = async () => {
+    if (!formData.name || !formData.price) {
+      showToast('⚠️ Completa al menos el nombre y precio', 'warning');
+      return;
+    }
+
     const newProduct = {
       ...formData,
       price: parseFloat(formData.price),
@@ -73,20 +104,11 @@ export default function ManageProducts() {
 
     const result = await addProduct(newProduct);
     if (result.success) {
+      setFormData({ name: '', price: '', image: '', category: '', description: '', colors: '', sizes: '', stock: '' });
       setShowAddForm(false);
-      setFormData({
-        name: '',
-        price: '',
-        image: '',
-        category: '',
-        description: '',
-        colors: '',
-        sizes: '',
-        stock: ''
-      });
-      alert('✅ Producto agregado');
+      showToast('✅ Producto agregado correctamente', 'success');
     } else {
-      alert('❌ Error al agregar');
+      showToast('❌ Error al agregar producto', 'error');
     }
   };
 
@@ -111,7 +133,13 @@ export default function ManageProducts() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      <Toast 
+        show={toast.show} 
+        message={toast.message} 
+        type={toast.type}
+        onClose={() => setToast({ ...toast, show: false })}
+      />
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Gestión de Productos</h1>
@@ -126,7 +154,6 @@ export default function ManageProducts() {
         </button>
       </div>
 
-      {/* Formulario de agregar */}
       {showAddForm && (
         <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-xl p-6">
           <h3 className="text-xl font-bold text-white mb-4">Agregar Nuevo Producto</h3>
@@ -219,7 +246,6 @@ export default function ManageProducts() {
         </div>
       )}
 
-      {/* Lista de productos */}
       <div className="space-y-4">
         {products.map((product) => (
           <div
@@ -227,7 +253,6 @@ export default function ManageProducts() {
             className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-xl p-4 hover:border-red-600 transition"
           >
             {editingId === product.id ? (
-              // MODO EDICIÓN
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="flex gap-3">
                   <img src={formData.image} alt="" className="w-20 h-20 object-cover rounded" />
@@ -280,14 +305,14 @@ export default function ManageProducts() {
                     type="text"
                     value={formData.colors}
                     onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
-                    placeholder="Colores (separados por coma)"
+                    placeholder="Colores"
                     className="px-3 py-2 bg-black border border-gray-700 text-white rounded"
                   />
                   <input
                     type="text"
                     value={formData.sizes}
                     onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
-                    placeholder="Tallas (separados por coma)"
+                    placeholder="Tallas"
                     className="px-3 py-2 bg-black border border-gray-700 text-white rounded"
                   />
                   <textarea
@@ -316,7 +341,6 @@ export default function ManageProducts() {
                 </div>
               </div>
             ) : (
-              // MODO VISUALIZACIÓN
               <div className="flex items-center gap-4">
                 <img src={product.image} alt={product.name} className="w-20 h-20 object-cover rounded" />
                 <div className="flex-1">
@@ -325,7 +349,6 @@ export default function ManageProducts() {
                   <div className="flex gap-4 mt-1 text-xs text-gray-500">
                     <span>Stock: {product.stock}</span>
                     <span>Vistas: {product.views}</span>
-                    {product.colors && <span>Colores: {product.colors.join(', ')}</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -347,6 +370,14 @@ export default function ManageProducts() {
           </div>
         ))}
       </div>
+      <ConfirmModal
+  show={confirmModal.show}
+  title="Eliminar producto"
+  message={`¿Seguro que deseas eliminar "${confirmModal.productName}"? Esta acción no se puede deshacer.`}
+  onCancel={() => setConfirmModal({ show: false, productId: null, productName: '' })}
+  onConfirm={confirmDelete}
+/>
+
     </div>
   );
 }
