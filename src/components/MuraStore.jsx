@@ -38,23 +38,44 @@ export default function MerchStore() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) {
-      alert('⚠️ Ingresa un código');
-      return;
-    }
+  
+// Nuevo estado para mensajes de cupón (error / success)
+  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
 
-    const result = await validateCoupon(couponInput);
-    if (result.success) {
-      setAppliedCoupon(result.coupon);
-      setHasDiscount(true);
-      setShowCouponInput(false);
-      setCouponInput('');
-      alert(`✅ Cupón aplicado: ${result.coupon.discount}% OFF`);
-    } else {
-      alert(`❌ ${result.message}`);
-    }
-  };
+ const handleApplyCoupon = async () => {
+
+  // limpia mensaje anterior
+  setCouponMessage({ type: "", text: "" });
+
+  if (!couponInput.trim()) {
+    setCouponMessage({
+      type: "error",
+      text: "Ingresa un cupón válido",
+    });
+    return;
+  }
+
+  const result = await validateCoupon(couponInput);
+
+  if (result.success) {
+    setAppliedCoupon(result.coupon);
+    setHasDiscount(true);
+    setShowCouponInput(false);
+    setCouponInput("");
+
+    setCouponMessage({
+      type: "success",
+      text: `Cupón aplicado: ${result.coupon.discount}% de descuento`,
+    });
+  } else {
+
+    setCouponMessage({
+      type: "error",
+      text: result.message,  // viene “cupón ya usado” o “cupón inválido”
+    });
+  }
+};
+
 
   const addToCart = (product) => {
     const existing = cart.find((item) => item.id === product.id);
@@ -199,6 +220,12 @@ export default function MerchStore() {
               className="w-full px-4 py-3 bg-black border-2 border-gray-700 text-white rounded-lg mb-4 focus:border-red-600 focus:outline-none text-center text-lg tracking-wider"
               maxLength="14"
             />
+            {couponMessage.text && (
+              <p className={`text-sm mb-4 ${couponMessage.type === "error" ? "text-red-500" : "text-green-500"}`}>
+                {couponMessage.text}
+              </p>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={handleApplyCoupon}

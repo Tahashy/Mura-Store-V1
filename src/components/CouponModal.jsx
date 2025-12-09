@@ -5,6 +5,9 @@ export default function CouponModal({ show, onApply, onClose }) {
   const [step, setStep] = useState(1); // 1: Teléfono, 2: Cupón
   const [phoneNumber, setPhoneNumber] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
+
 
   if (!show) return null;
 
