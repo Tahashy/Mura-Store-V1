@@ -1,5 +1,6 @@
+// Reemplaza el componente Cart completo:
 import React from 'react';
-import { Trash2, Gift } from 'lucide-react';
+import { Trash2, Gift, Check } from 'lucide-react';
 
 export default function Cart({
   cart,
@@ -10,7 +11,9 @@ export default function Cart({
   welcomeDiscount,
   getTotalItems,
   currentMakiCoupon,
-  onFinalizePurchase // 🔥 NUEVA PROP
+  onFinalizePurchase,
+  discountedProductId, // 🔥 NUEVA PROP
+  onSelectDiscountProduct // 🔥 NUEVA PROP
 }) {
 
   return (
@@ -21,36 +24,84 @@ export default function Cart({
         <p className="text-gray-500 text-center py-8">Tu carrito está vacío</p>
       ) : (
         <>
+          {/* 🔥 MENSAJE SI HAY CUPÓN ACTIVO */}
+          {hasDiscount && (
+            <div className="mb-4 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg p-3">
+              <p className="text-red-400 text-sm font-semibold mb-2">
+                🎁 Cupón activo: {welcomeDiscount}% OFF
+              </p>
+              <p className="text-gray-400 text-xs">
+                Selecciona el producto que quieres con descuento ⬇️
+              </p>
+            </div>
+          )}
+
           <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-            {cart.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 bg-black border border-gray-800 p-3 rounded-lg">
-                <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-white truncate">{item.name}</p>
-                  <p className="text-xs text-gray-400">
-                    ${hasDiscount ? (item.price * (1 - welcomeDiscount / 100)).toFixed(2) : item.price.toFixed(2)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateQuantity(item.id, -1)}
-                    className="w-6 h-6 bg-gray-800 text-white rounded hover:bg-red-600 transition text-sm"
-                  >
-                    -
+            {cart.map((item) => {
+              const isDiscounted = hasDiscount && item.id === discountedProductId;
+              
+              return (
+                <div 
+                  key={item.id} 
+                  className={`flex items-center gap-3 bg-black border-2 p-3 rounded-lg transition ${
+                    isDiscounted ? 'border-red-600' : 'border-gray-800'
+                  }`}
+                >
+                  <img src={item.image || null} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-white truncate">
+                      {item.name}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`text-xs ${isDiscounted ? 'line-through text-gray-500' : 'text-gray-400'}`}>
+                        S/{item.price.toFixed(2)}
+                      </p>
+                      {isDiscounted && (
+                        <p className="text-sm font-bold text-red-500">
+                          S/{(item.price * (1 - welcomeDiscount / 100)).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 🔥 BOTÓN PARA SELECCIONAR PRODUCTO CON DESCUENTO */}
+                  {hasDiscount && (
+                    <button
+                      onClick={() => onSelectDiscountProduct(item.id)}
+                      className={`p-2 rounded-lg transition ${
+                        isDiscounted 
+                          ? 'bg-red-600 text-white' 
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                      }`}
+                      title={isDiscounted ? 'Con descuento' : 'Aplicar descuento'}
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => updateQuantity(item.id, -1)}
+                      className="w-6 h-6 bg-gray-800 text-white rounded hover:bg-red-600 transition text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="font-semibold text-sm text-white">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item.id, 1)}
+                      className="w-6 h-6 bg-gray-800 text-white rounded hover:bg-red-600 transition text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                  
+                  <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-400">
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                  <span className="font-semibold text-sm text-white">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.id, 1)}
-                    className="w-6 h-6 bg-gray-800 text-white rounded hover:bg-red-600 transition text-sm"
-                  >
-                    +
-                  </button>
                 </div>
-                <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-400">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="border-t border-gray-800 pt-4 space-y-2">
@@ -58,21 +109,26 @@ export default function Cart({
               <span className="text-gray-400">Artículos:</span>
               <span className="font-semibold text-white">{getTotalItems()}</span>
             </div>
-            {hasDiscount && (
+            {hasDiscount && discountedProductId && (
               <div className="flex justify-between text-sm text-red-600">
                 <span>Descuento ({welcomeDiscount}%):</span>
                 <span>
-                  -${(cart.reduce((sum, item) => sum + item.price * item.quantity, 0) * (welcomeDiscount / 100)).toFixed(2)}
+                  -{(() => {
+                    const item = cart.find(p => p.id === discountedProductId);
+                    if (item) {
+                      return `S/${(item.price * (welcomeDiscount / 100)).toFixed(2)}`;
+                    }
+                    return 'S/0.00';
+                  })()}
                 </span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold">
               <span className="text-white">Total:</span>
-              <span className="text-red-600">${calculateTotal().toFixed(2)}</span>
+              <span className="text-red-600">S/{calculateTotal().toFixed(2)}</span>
             </div>
           </div>
 
-          {/* 🔥 BOTÓN CORREGIDO */}
           <button
             onClick={onFinalizePurchase}
             className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition mt-4"
@@ -80,16 +136,14 @@ export default function Cart({
             Finalizar Compra por WhatsApp
           </button>
 
-          {/* 🔥 ALERTA CUANDO HAY 3+ PRODUCTOS */}
-          {getTotalItems() >= 3 && !currentMakiCoupon && (
+          {getTotalItems() >= 2 && !currentMakiCoupon && (
             <div className="mt-3 bg-yellow-900 bg-opacity-30 border border-yellow-600 rounded-lg p-3 text-sm text-yellow-400">
-              🎉 ¡Comprando 3+ artículos ganarás un cupón de makis!
+              🎉 ¡Comprando 2+ artículos ganarás un cupón de makis!
             </div>
           )}
         </>
       )}
 
-      {/* 🔥 CUPÓN DE MAKIS VISIBLE */}
       {currentMakiCoupon && (
         <div className="mt-6 bg-gradient-to-r from-red-900 to-red-800 border-2 border-red-600 rounded-lg p-4 animate-pulse">
           <div className="flex items-center gap-2 mb-2">

@@ -42,39 +42,45 @@ export default function MerchStore() {
 // Nuevo estado para mensajes de cupón (error / success)
   const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
 
- const handleApplyCoupon = async () => {
+  // Agregar después de los otros estados (línea ~20):
+   const [discountedProductId, setDiscountedProductId] = useState(null);
 
-  // limpia mensaje anterior
-  setCouponMessage({ type: "", text: "" });
+ // Reemplaza la función handleApplyCoupon (línea ~45):
+  const handleApplyCoupon = async () => {
+    setCouponMessage({ type: "", text: "" });
 
-  if (!couponInput.trim()) {
-    setCouponMessage({
-      type: "error",
-      text: "Ingresa un cupón válido",
-    });
-    return;
-  }
+    if (!couponInput.trim()) {
+      setCouponMessage({
+        type: "error",
+        text: "Ingresa un cupón válido",
+      });
+      return;
+    }
 
-  const result = await validateCoupon(couponInput);
+    const result = await validateCoupon(couponInput);
 
-  if (result.success) {
-    setAppliedCoupon(result.coupon);
-    setHasDiscount(true);
-    setShowCouponInput(false);
-    setCouponInput("");
+    if (result.success) {
+      setAppliedCoupon(result.coupon);
+      setHasDiscount(true);
+      setShowCouponInput(false);
+      setCouponInput("");
 
-    setCouponMessage({
-      type: "success",
-      text: `Cupón aplicado: ${result.coupon.discount}% de descuento`,
-    });
-  } else {
+      // Si hay productos en el carrito, aplicar al primero por defecto
+      if (cart.length > 0) {
+        setDiscountedProductId(cart[0].id);
+      }
 
-    setCouponMessage({
-      type: "error",
-      text: result.message,  // viene “cupón ya usado” o “cupón inválido”
-    });
-  }
-};
+      setCouponMessage({
+        type: "success",
+        text: `Cupón aplicado: ${result.coupon.discount}% de descuento en 1 producto`,
+      });
+    } else {
+      setCouponMessage({
+        type: "error",
+        text: result.message,
+      });
+    }
+  };
 
 
   const addToCart = (product) => {
@@ -108,27 +114,43 @@ export default function MerchStore() {
     setCart(cart.filter((item) => item.id !== productId));
   };
 
+ // Reemplaza la función calculateTotal() completa (aproximadamente línea 80):
+// Reemplaza calculateTotal (línea ~80):
   const calculateTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    if (hasDiscount && appliedCoupon) {
-      return subtotal * (1 - appliedCoupon.discount / 100);
+    if (!hasDiscount || !appliedCoupon || !discountedProductId) {
+      return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     }
-    return subtotal;
+
+    let total = 0;
+    cart.forEach((item) => {
+      if (item.id === discountedProductId) {
+        // Solo la primera unidad de este producto recibe descuento
+        const discountedPrice = item.price * (1 - appliedCoupon.discount / 100);
+        total += discountedPrice; // Primera unidad con descuento
+        if (item.quantity > 1) {
+          total += item.price * (item.quantity - 1); // Resto sin descuento
+        }
+      } else {
+        total += item.price * item.quantity;
+      }
+    });
+
+    return total;
   };
 
   const getTotalItems = () => cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Reemplaza la función completePurchase (línea 98-135):
+  // Reemplaza completePurchase (línea ~98):
   const completePurchase = async () => {
     const itemCount = getTotalItems();
-    
-    // Marcar cupón como usado
+
     if (appliedCoupon) {
       await markAsUsed(appliedCoupon.code);
     }
 
-    // Generar cupón de makis si compra 3+
     let newCoupon = null;
-    if (itemCount >= 3) {
+    if (itemCount >= 2) {
       newCoupon = `MAKI-${generateRandomCode().slice(-6)}`;
       setCurrentMakiCoupon(newCoupon);
     }
@@ -137,23 +159,43 @@ export default function MerchStore() {
     let message = `Hola!%20Quiero%20realizar%20esta%20compra:%0A%0A`;
 
     cart.forEach((item) => {
-      const price = hasDiscount && appliedCoupon
-        ? (item.price * (1 - appliedCoupon.discount / 100)).toFixed(2) 
-        : item.price.toFixed(2);
-      message += `${item.quantity}x%20${item.name}`;
-      if (item.selectedSize) message += `%20(${item.selectedSize})`;
-      if (item.selectedColor) message += `%20-%20${item.selectedColor}`;
-      message += `%20-%20S/${price}%0A`;
+      const isDiscounted = hasDiscount && item.id === discountedProductId;
+
+      let price;
+      if (isDiscounted) {
+        // Primera unidad con descuento
+        const discountedPrice = item.price * (1 - appliedCoupon.discount / 100);
+        price = discountedPrice.toFixed(2);
+
+        message += `1x%20${item.name}`;
+        if (item.selectedSize) message += `%20(${item.selectedSize})`;
+        if (item.selectedColor) message += `%20-%20${item.selectedColor}`;
+        message += `%20-%20S/${price}%20✨(${appliedCoupon.discount}%25%20OFF)%0A`;
+
+        // Resto sin descuento
+        if (item.quantity > 1) {
+          message += `${item.quantity - 1}x%20${item.name}`;
+          if (item.selectedSize) message += `%20(${item.selectedSize})`;
+          if (item.selectedColor) message += `%20-%20${item.selectedColor}`;
+          message += `%20-%20S/${item.price.toFixed(2)}%0A`;
+        }
+      } else {
+        price = item.price.toFixed(2);
+        message += `${item.quantity}x%20${item.name}`;
+        if (item.selectedSize) message += `%20(${item.selectedSize})`;
+        if (item.selectedColor) message += `%20-%20${item.selectedColor}`;
+        message += `%20-%20S/${price}%0A`;
+      }
     });
 
     message += `%0A*Total:%20S/${total.toFixed(2)}*`;
-    
+
     if (hasDiscount && appliedCoupon) {
-      message += `%0ACupon%20aplicado:%20${appliedCoupon.code}%20(${appliedCoupon.discount}%25)`;
+      message += `%0ACupón%20usado:%20${appliedCoupon.code}`;
     }
 
     if (newCoupon) {
-      message += `%0A%0A*FELICITACIONES!*%0AHas%20ganado%20un%20cupon%20de%20makis:%0A*${newCoupon}*`;
+      message += `%0A%0A*¡FELICITACIONES!*%0AHas%20ganado%20un%20cupón%20de%20makis:%0A*${newCoupon}*`;
     }
 
     const whatsappUrl = `https://wa.me/${config.whatsapp_number}?text=${message}`;
@@ -163,6 +205,7 @@ export default function MerchStore() {
     setCart([]);
     setHasDiscount(false);
     setAppliedCoupon(null);
+    setDiscountedProductId(null); // 🔥 RESETEAR
 
     setTimeout(() => {
       setCurrentMakiCoupon(null);
@@ -317,6 +360,9 @@ export default function MerchStore() {
               getTotalItems={getTotalItems}
               currentMakiCoupon={currentMakiCoupon}
               onFinalizePurchase={completePurchase}
+              discountedProductId={discountedProductId} // 🔥 NUEVA PROP
+              onSelectDiscountProduct={setDiscountedProductId} // 🔥 NUEVA PROP
+              appliedCoupon={appliedCoupon}
             />
           </div>
         </div>

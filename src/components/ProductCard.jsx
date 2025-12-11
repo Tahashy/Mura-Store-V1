@@ -5,7 +5,7 @@ export default function ProductCard({ product, hasDiscount, welcomeDiscount, add
     <div className="bg-gradient-to-br from-gray-900 to-black border border-red-900 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-red-600 transition-all cursor-pointer">
       <div className="h-48 overflow-hidden">
         <img
-          src={product.image}
+          src={product.image.trim() ? product.image : null}
           alt={product.name}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
         />
