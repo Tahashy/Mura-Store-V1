@@ -4,6 +4,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
 import Toast from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
+import { supabase } from '../../supabaseClient';
 
 
 export default function ManageProducts() {
@@ -112,20 +113,50 @@ export default function ManageProducts() {
     }
   };
 
-  const handleImageUpload = (e, productId = null) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (productId) {
-          updateProduct(productId, { image: reader.result });
-        } else {
-          setFormData({ ...formData, image: reader.result });
-        }
-      };
-      reader.readAsDataURL(file);
+const handleImageUpload = async (e, productId = null) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  showToast('📤 Subiendo imagen...', 'info');
+
+  try {
+    // Generar nombre único
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+    // Subir archivo
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    // Obtener URL pública
+    const { data } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(fileName);
+
+    const publicUrl = data.publicUrl;
+
+    console.log('URL generada:', publicUrl);
+
+    if (productId) {
+      // Actualizar en la BD
+      await updateProduct(productId, { image: publicUrl });
+      
+      // 🔥 ACTUALIZAR TAMBIÉN EL ESTADO LOCAL
+      setFormData({ ...formData, image: publicUrl });
+      
+      showToast('✅ Imagen actualizada', 'success');
+    } else {
+      setFormData({ ...formData, image: publicUrl });
+      showToast('✅ Imagen cargada', 'success');
     }
-  };
+  } catch (error) {
+    console.error('Error completo:', error);
+    showToast(`❌ Error: ${error.message}`, 'error');
+  }
+};
 
   if (loading) {
     return <div className="text-white text-center py-12">Cargando productos...</div>;
@@ -220,13 +251,21 @@ export default function ManageProducts() {
               className="px-4 py-2 bg-black border border-gray-700 text-white rounded-lg focus:border-red-600 focus:outline-none"
             />
             <div>
-              <label className="block text-sm text-gray-400 mb-1">O subir imagen</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleImageUpload(e)}
-                className="w-full text-sm text-gray-400"
-              />
+              <label className="block text-sm text-gray-400 mb-2">O subir imagen</label>
+              <label className="cursor-pointer">
+                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 border-2 border-gray-700 rounded-lg hover:border-red-600 hover:bg-gray-700 transition">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm text-gray-300">Seleccionar archivo</span>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={(e) => handleImageUpload(e)}
+                  className="hidden"
+                />
+              </label>
             </div>
           </div>
           <div className="flex gap-3 mt-4">
@@ -257,12 +296,20 @@ export default function ManageProducts() {
                 <div className="flex gap-3">
                   <img src={formData.image} alt="" className="w-20 h-20 object-cover rounded" />
                   <div className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, product.id)}
-                      className="w-full text-xs text-gray-400 mb-2"
-                    />
+                    <label className="cursor-pointer block mb-2">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded hover:border-red-600 hover:bg-gray-700 transition">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <span className="text-xs text-gray-300">Cambiar imagen</span>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*,.heic,.heif"
+                        onChange={(e) => handleImageUpload(e, product.id)}
+                        className="hidden"
+                      />
+                    </label>
                     <input
                       type="text"
                       value={formData.image}
