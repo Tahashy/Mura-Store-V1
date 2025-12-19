@@ -7,6 +7,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import { supabase } from '../../supabaseClient';
 
 
+
 export default function ManageProducts() {
   const { products, loading, addProduct, updateProduct, deleteProduct } = useProducts();
   const { categories } = useCategories();
@@ -15,7 +16,7 @@ export default function ManageProducts() {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    image: '',
+    images: [],
     category: '',
     description: '',
     colors: '',
@@ -32,10 +33,10 @@ export default function ManageProducts() {
 
   //Estados para confirmar eliminación
   const [confirmModal, setConfirmModal] = useState({
-  show: false,
-  productId: null,
-  productName: ''
-});
+    show: false,
+    productId: null,
+    productName: ''
+  });
 
 
   const handleEdit = (product) => {
@@ -43,7 +44,7 @@ export default function ManageProducts() {
     setFormData({
       name: product.name,
       price: product.price,
-      image: product.image,
+      images: product.images,
       category: product.category,
       description: product.description || '',
       colors: product.colors?.join(', ') || '',
@@ -56,6 +57,7 @@ export default function ManageProducts() {
     const updates = {
       ...formData,
       price: parseFloat(formData.price),
+      images: formData.images,
       colors: formData.colors.split(',').map(c => c.trim()).filter(c => c),
       sizes: formData.sizes.split(',').map(s => s.trim()).filter(s => s),
       stock: parseInt(formData.stock) || 0
@@ -75,18 +77,18 @@ export default function ManageProducts() {
   };
 
   const confirmDelete = async () => {
-  const { productId, productName } = confirmModal;
+    const { productId, productName } = confirmModal;
 
-  const result = await deleteProduct(productId);
+    const result = await deleteProduct(productId);
 
-  if (result.success) {
-    showToast(`🗑️ "${productName}" eliminado correctamente`, 'success');
-  } else {
-    showToast('❌ Error al eliminar producto', 'error');
-  }
+    if (result.success) {
+      showToast(`🗑️ "${productName}" eliminado correctamente`, 'success');
+    } else {
+      showToast('❌ Error al eliminar producto', 'error');
+    }
 
-  setConfirmModal({ show: false, productId: null, productName: '' });
-};
+    setConfirmModal({ show: false, productId: null, productName: '' });
+  };
 
 
   const handleAdd = async () => {
@@ -98,6 +100,7 @@ export default function ManageProducts() {
     const newProduct = {
       ...formData,
       price: parseFloat(formData.price),
+      images: formData.images,
       colors: formData.colors.split(',').map(c => c.trim()).filter(c => c),
       sizes: formData.sizes.split(',').map(s => s.trim()).filter(s => s),
       stock: parseInt(formData.stock) || 0
@@ -105,7 +108,7 @@ export default function ManageProducts() {
 
     const result = await addProduct(newProduct);
     if (result.success) {
-      setFormData({ name: '', price: '', image: '', category: '', description: '', colors: '', sizes: '', stock: '' });
+      setFormData({ name: '', price: '', images: [], category: '', description: '', colors: '', sizes: '', stock: '' });
       setShowAddForm(false);
       showToast('✅ Producto agregado correctamente', 'success');
     } else {
@@ -113,50 +116,64 @@ export default function ManageProducts() {
     }
   };
 
-const handleImageUpload = async (e, productId = null) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  showToast('📤 Subiendo imagen...', 'info');
-
-  try {
-    // Generar nombre único
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    // Subir archivo
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(fileName, file);
-
-    if (uploadError) throw uploadError;
-
-    // Obtener URL pública
-    const { data } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(fileName);
-
-    const publicUrl = data.publicUrl;
-
-    console.log('URL generada:', publicUrl);
+  const removeImage = (index, productId = null) => {
+    const newImages = formData.images.filter((_, i) => i !== index);
+    setFormData({ ...formData, images: newImages });
 
     if (productId) {
-      // Actualizar en la BD
-      await updateProduct(productId, { image: publicUrl });
-      
-      // 🔥 ACTUALIZAR TAMBIÉN EL ESTADO LOCAL
-      setFormData({ ...formData, image: publicUrl });
-      
-      showToast('✅ Imagen actualizada', 'success');
-    } else {
-      setFormData({ ...formData, image: publicUrl });
-      showToast('✅ Imagen cargada', 'success');
+      updateProduct(productId, { images: newImages });
+      showToast('🗑️ Imagen eliminada', 'info');
     }
-  } catch (error) {
-    console.error('Error completo:', error);
-    showToast(`❌ Error: ${error.message}`, 'error');
-  }
-};
+  };
+
+  const handleImageUpload = async (e, productId = null) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    // Validar máximo 3 imágenes
+    const currentImages = formData.images || [];
+    if (currentImages.length + files.length > 3) {
+      showToast('⚠️ Máximo 3 imágenes por producto', 'warning');
+      return;
+    }
+
+    showToast(`📤 Subiendo ${files.length} imagen(es)...`, 'info');
+
+    try {
+      const uploadedUrls = [];
+
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(data.publicUrl);
+      }
+
+      const newImages = [...currentImages, ...uploadedUrls];
+
+      if (productId) {
+        await updateProduct(productId, { images: newImages });
+        setFormData({ ...formData, images: newImages });
+        showToast('✅ Imágenes actualizadas', 'success');
+      } else {
+        setFormData({ ...formData, images: newImages });
+        showToast('✅ Imágenes cargadas', 'success');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showToast(`❌ Error: ${error.message}`, 'error');
+    }
+  };
 
   if (loading) {
     return <div className="text-white text-center py-12">Cargando productos...</div>;
@@ -164,9 +181,9 @@ const handleImageUpload = async (e, productId = null) => {
 
   return (
     <div className="space-y-6">
-      <Toast 
-        show={toast.show} 
-        message={toast.message} 
+      <Toast
+        show={toast.show}
+        message={toast.message}
         type={toast.type}
         onClose={() => setToast({ ...toast, show: false })}
       />
@@ -247,7 +264,7 @@ const handleImageUpload = async (e, productId = null) => {
               type="text"
               placeholder="URL de imagen"
               value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, images: e.target.value })}
               className="px-4 py-2 bg-black border border-gray-700 text-white rounded-lg focus:border-red-600 focus:outline-none"
             />
             <div>
@@ -293,32 +310,41 @@ const handleImageUpload = async (e, productId = null) => {
           >
             {editingId === product.id ? (
               <div className="grid md:grid-cols-3 gap-4">
-                <div className="flex gap-3">
-                  <img src={formData.image} alt="" className="w-20 h-20 object-cover rounded" />
-                  <div className="flex-1">
-                    <label className="cursor-pointer block mb-2">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded hover:border-red-600 hover:bg-gray-700 transition">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span className="text-xs text-gray-300">Cambiar imagen</span>
+                <div className="flex gap-3 flex-wrap">
+                  {/* Imágenes actuales */}
+                  {formData.images?.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img}
+                        alt={`Imagen ${idx + 1}`}
+                        className="w-20 h-20 object-cover rounded border-2 border-gray-700"
+                      />
+                      <button
+                        onClick={() => removeImage(idx, product.id)}
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Botón agregar más */}
+                  {formData.images?.length < 3 && (
+                    <label className="cursor-pointer">
+                      <div className="w-20 h-20 flex items-center justify-center bg-gray-800 border-2 border-dashed border-gray-700 rounded hover:border-red-600 transition">
+                        <span className="text-3xl text-gray-600">+</span>
                       </div>
                       <input
                         type="file"
-                        accept="image/*,.heic,.heif"
+                        accept="image/*"
+                        multiple
                         onChange={(e) => handleImageUpload(e, product.id)}
                         className="hidden"
                       />
                     </label>
-                    <input
-                      type="text"
-                      value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      className="w-full px-2 py-1 bg-black border border-gray-700 text-white rounded text-sm"
-                      placeholder="URL imagen"
-                    />
-                  </div>
+                  )}
                 </div>
+                ////////////////////
                 <div className="md:col-span-2 grid grid-cols-2 gap-3">
                   <input
                     type="text"
@@ -389,7 +415,20 @@ const handleImageUpload = async (e, productId = null) => {
               </div>
             ) : (
               <div className="flex items-center gap-4">
-                <img src={product.image} alt={product.name} className="w-20 h-20 object-cover rounded" />
+                <div className="relative">
+                  <img
+                    src={product.images?.[0] }
+                    alt={product.name}
+                    className="w-20 h-20 object-cover"
+                  />
+
+                  {/* Indicador de múltiples imágenes */}
+                  {product.images?.length > 1 && (
+                    <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold">
+                      +{product.images.length - 1}
+                    </span>
+                  )}
+                </div>
                 <div className="flex-1">
                   <h3 className="text-white font-bold">{product.name}</h3>
                   <p className="text-gray-400 text-sm">{product.category} • S/ {product.price.toFixed(2)}</p>
@@ -418,12 +457,12 @@ const handleImageUpload = async (e, productId = null) => {
         ))}
       </div>
       <ConfirmModal
-  show={confirmModal.show}
-  title="Eliminar producto"
-  message={`¿Seguro que deseas eliminar "${confirmModal.productName}"? Esta acción no se puede deshacer.`}
-  onCancel={() => setConfirmModal({ show: false, productId: null, productName: '' })}
-  onConfirm={confirmDelete}
-/>
+        show={confirmModal.show}
+        title="Eliminar producto"
+        message={`¿Seguro que deseas eliminar "${confirmModal.productName}"? Esta acción no se puede deshacer.`}
+        onCancel={() => setConfirmModal({ show: false, productId: null, productName: '' })}
+        onConfirm={confirmDelete}
+      />
 
     </div>
   );

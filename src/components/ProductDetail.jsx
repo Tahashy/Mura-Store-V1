@@ -5,12 +5,13 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     if (product) {
       setSelectedColor(product.colors?.[0] || '');
       setSelectedSize(product.sizes?.[0] || '');
-      
+
       if (onIncrementViews) {
         onIncrementViews(product.id);
       }
@@ -30,31 +31,67 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 backdrop-blur-sm p-0 md:p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-gradient-to-br from-gray-900 to-black border-t-2 md:border-2 border-red-600 md:rounded-2xl w-full md:max-w-5xl h-full md:h-auto max-h-screen md:max-h-[95vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* LAYOUT MÓVIL Y DESKTOP */}
         <div className="flex flex-col md:grid md:grid-cols-2 h-full md:h-auto">
-          
+
           {/* IMAGEN - Ocupa más espacio en móvil */}
           <div className="relative h-[50vh] md:h-[600px] bg-gray-800 flex-shrink-0">
-            <img 
-              src={product.image || null} 
+            <img
+              src={product.images?.[currentImageIndex] || product.images?.[0] }
               alt={product.name}
               className="w-full h-full object-contain md:object-cover"
             />
-            <button 
+
+            {/* Controles de carrusel */}
+            {product.images?.length > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) =>
+                    prev === 0 ? product.images.length - 1 : prev - 1
+                  )}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-80 transition"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) =>
+                    prev === product.images.length - 1 ? 0 : prev + 1
+                  )}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-80 transition"
+                >
+                  →
+                </button>
+
+                {/* Indicadores (puntitos) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {product.images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`w-2 h-2 rounded-full transition ${idx === currentImageIndex ? 'bg-red-600' : 'bg-gray-400'
+                        }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Botón cerrar */}
+            <button
               onClick={onClose}
               className="absolute top-4 right-4 bg-black bg-opacity-80 p-3 rounded-full hover:bg-opacity-100 transition shadow-lg"
             >
               <X className="w-6 h-6 text-white" />
             </button>
-            
+
             {/* Badge de stock bajo */}
             {product.stock && product.stock < 10 && (
               <div className="absolute top-4 left-4 bg-yellow-600 text-white px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg">
@@ -63,12 +100,14 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
             )}
           </div>
 
+
+
           {/* DETALLES - Scrolleable en móvil */}
           <div className="p-5 md:p-6 overflow-y-auto flex-1">
             {/* Nombre y categoría */}
             <span className="text-red-600 text-xs font-semibold uppercase tracking-wide">{product.category}</span>
             <h2 className="text-xl md:text-2xl font-bold text-white mb-2 mt-1">{product.name}</h2>
-            
+
             {/* Rating */}
             <div className="flex items-center gap-2 mb-4">
               <div className="flex">
@@ -93,11 +132,10 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
                     <button
                       key={idx}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-4 py-2 rounded-lg border-2 transition text-sm font-medium ${
-                        selectedColor === color
+                      className={`px-4 py-2 rounded-lg border-2 transition text-sm font-medium ${selectedColor === color
                           ? 'border-red-600 bg-red-600 text-white'
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-red-600'
-                      }`}
+                        }`}
                     >
                       {color}
                     </button>
@@ -115,11 +153,10 @@ export default function ProductDetail({ product, onClose, onAddToCart, onIncreme
                     <button
                       key={idx}
                       onClick={() => setSelectedSize(size)}
-                      className={`w-12 h-12 rounded-lg border-2 font-semibold transition text-sm ${
-                        selectedSize === size
+                      className={`w-12 h-12 rounded-lg border-2 font-semibold transition text-sm ${selectedSize === size
                           ? 'border-red-600 bg-red-600 text-white'
                           : 'border-gray-700 bg-gray-800 text-gray-300 hover:border-red-600'
-                      }`}
+                        }`}
                     >
                       {size}
                     </button>

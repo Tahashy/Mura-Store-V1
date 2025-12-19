@@ -28,6 +28,22 @@ export default function MerchStore() {
 
   // Estados locales
   const [cart, setCart] = useState([]);
+  // Cargar carrito desde localStorage al iniciar
+  useEffect(() => {
+    const savedCart = localStorage.getItem('murastore_cart');
+    if (savedCart) {
+      setCart(JSON.parse(savedCart));
+    }
+  }, []);
+
+  // Guardar carrito cada vez que cambie
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem('murastore_cart', JSON.stringify(cart));
+    }else{
+      localStorage.removeItem('murastore_cart');
+    }
+}, [cart]);
   const [hasDiscount, setHasDiscount] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [showCouponInput, setShowCouponInput] = useState(false);

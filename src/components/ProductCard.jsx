@@ -1,13 +1,19 @@
 import React from 'react';
 
+
 export default function ProductCard({ product, hasDiscount, welcomeDiscount, addToCart }) {
   return (
     <div className="bg-gradient-to-br from-gray-900 to-black border border-red-900 rounded-xl shadow-lg overflow-hidden hover:shadow-2xl hover:border-red-600 transition-all cursor-pointer">
-      <div className="h-48 overflow-hidden">
+      <div className="h-48 overflow-hidden rounded-t-xl">
         <img
-          src={product.image.trim() ? product.image : null}
+          src={
+            Array.isArray(product.images) && product.images.length > 0
+              ? product.images[0]
+              : ""
+           }
           alt={product.name}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-300 hover:scale-110 "
         />
       </div>
       <div className="p-4">

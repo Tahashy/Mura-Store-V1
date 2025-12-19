@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MuraStore from './components/MuraStore';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ManageProducts from './pages/admin/ManageProducts';
@@ -13,6 +13,30 @@ export default function App() {
   const [isAdminAuth, setIsAdminAuth] = useState(false);
   const [currentAdminPage, setCurrentAdminPage] = useState('dashboard');
   const [loginError, setLoginError] = useState(false);
+  // Cargar sesión de admin al iniciar
+useEffect(() => {
+  const savedAuth = localStorage.getItem('murastore_admin_auth');
+  const savedPage = localStorage.getItem('murastore_admin_page');
+  
+  if (savedAuth === 'true') {
+    setIsAdminAuth(true);
+    setShowAdmin(true);
+    if (savedPage) {
+      setCurrentAdminPage(savedPage);
+    }
+  }
+}, []);
+
+// Guardar sesión cuando cambie
+useEffect(() => {
+  if (isAdminAuth) {
+    localStorage.setItem('murastore_admin_auth', 'true');
+    localStorage.setItem('murastore_admin_page', currentAdminPage);
+  } else {
+    localStorage.removeItem('murastore_admin_auth');
+    localStorage.removeItem('murastore_admin_page');
+  }
+}, [isAdminAuth, currentAdminPage]);
 
   const handleAdminLogin = () => {
     if (adminPassword === 'Mura@2025') {
