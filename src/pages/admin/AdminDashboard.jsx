@@ -99,7 +99,7 @@ export default function AdminDashboard() {
                 className="flex items-center gap-3 bg-black bg-opacity-50 p-3 rounded-lg"
               >
                 <img
-                  src={product.image}
+                  src={product.images?.[0]}
                   alt={product.name}
                   className="w-12 h-12 object-cover rounded"
                 />
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                   className="flex items-center gap-3 bg-yellow-900 bg-opacity-20 p-3 rounded-lg border border-yellow-800"
                 >
                   <img
-                    src={product.image}
+                    src={product.images?.[0]}
                     alt={product.name}
                     className="w-12 h-12 object-cover rounded"
                   />

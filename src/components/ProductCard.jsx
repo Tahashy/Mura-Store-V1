@@ -10,9 +10,8 @@ export default function ProductCard({ product, hasDiscount, welcomeDiscount, add
             Array.isArray(product.images) && product.images.length > 0
               ? product.images[0]
               : ""
-           }
+          }
           alt={product.name}
-          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-110 "
         />
       </div>
@@ -42,7 +41,7 @@ export default function ProductCard({ product, hasDiscount, welcomeDiscount, add
             Agregar
           </button>
         </div>
-        
+
         {/* Indicadores */}
         <div className="flex gap-2 mt-3">
           {product.stock && product.stock < 10 && (

@@ -91,6 +91,19 @@ export default function ManageProducts() {
   };
 
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      price: '',
+      images: [],
+      category: '',
+      description: '',
+      colors: '',
+      sizes: '',
+      stock: ''
+    });
+  };
+
   const handleAdd = async () => {
     if (!formData.name || !formData.price) {
       showToast('⚠️ Completa al menos el nombre y precio', 'warning');
@@ -108,7 +121,7 @@ export default function ManageProducts() {
 
     const result = await addProduct(newProduct);
     if (result.success) {
-      setFormData({ name: '', price: '', images: [], category: '', description: '', colors: '', sizes: '', stock: '' });
+      resetForm();
       setShowAddForm(false);
       showToast('✅ Producto agregado correctamente', 'success');
     } else {
@@ -293,7 +306,10 @@ export default function ManageProducts() {
               Agregar Producto
             </button>
             <button
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                resetForm();
+                setShowAddForm(false);
+              }}
               className="bg-gray-700 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
             >
               Cancelar
@@ -417,7 +433,7 @@ export default function ManageProducts() {
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <img
-                    src={product.images?.[0] }
+                    src={product.images?.[0]}
                     alt={product.name}
                     className="w-20 h-20 object-cover"
                   />

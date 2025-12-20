@@ -19,7 +19,7 @@ export default function Cart({
   return (
     <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-red-600 rounded-xl shadow-lg p-6 sticky top-24">
       <h2 className="text-2xl font-bold text-white mb-4">Carrito</h2>
-      
+
       {cart.length === 0 ? (
         <p className="text-gray-500 text-center py-8">Tu carrito está vacío</p>
       ) : (
@@ -39,16 +39,15 @@ export default function Cart({
           <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
             {cart.map((item) => {
               const isDiscounted = hasDiscount && item.id === discountedProductId;
-              
+
               return (
-                <div 
-                  key={item.id} 
-                  className={`flex items-center gap-3 bg-black border-2 p-3 rounded-lg transition ${
-                    isDiscounted ? 'border-red-600' : 'border-gray-800'
-                  }`}
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 bg-black border-2 p-3 rounded-lg transition ${isDiscounted ? 'border-red-600' : 'border-gray-800'
+                    }`}
                 >
-                  <img src={item.image || null} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                  
+                  <img src={item.images?.[0] || null} alt={item.name} className="w-12 h-12 object-cover rounded" />
+
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-white truncate">
                       {item.name}
@@ -69,11 +68,10 @@ export default function Cart({
                   {hasDiscount && (
                     <button
                       onClick={() => onSelectDiscountProduct(item.id)}
-                      className={`p-2 rounded-lg transition ${
-                        isDiscounted 
-                          ? 'bg-red-600 text-white' 
+                      className={`p-2 rounded-lg transition ${isDiscounted
+                          ? 'bg-red-600 text-white'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                      }`}
+                        }`}
                       title={isDiscounted ? 'Con descuento' : 'Aplicar descuento'}
                     >
                       <Check className="w-4 h-4" />
@@ -95,7 +93,7 @@ export default function Cart({
                       +
                     </button>
                   </div>
-                  
+
                   <button onClick={() => removeFromCart(item.id)} className="text-red-500 hover:text-red-400">
                     <Trash2 className="w-4 h-4" />
                   </button>
